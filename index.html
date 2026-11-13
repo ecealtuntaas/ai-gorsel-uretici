@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hayal Et — AI Görsel Üretici</title>
+<style>
+  :root {
+    --bg: #0f0d17;
+    --panel: #1a1726;
+    --panel-2: #241f35;
+    --text: #f2eefc;
+    --muted: #a39cb8;
+    --accent: #ff7a59;
+    --accent-2: #b48cff;
+    --border: #322b48;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 80% -10%, #2a1d4a 0%, transparent 60%), var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+  header { text-align: center; margin-bottom: 32px; }
+  .logo {
+    font-size: 40px; font-weight: 800; letter-spacing: -1px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header p { color: var(--muted); margin-top: 8px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  textarea {
+    width: 100%; min-height: 96px; resize: vertical;
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; font-size: 16px; font-family: inherit; outline: none;
+  }
+  textarea:focus { border-color: var(--accent-2); }
+
+  .label { font-size: 13px; color: var(--muted); margin: 16px 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer; transition: .15s;
+  }
+  .chip:hover { border-color: var(--accent-2); }
+  .chip.active { background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; }
+
+  .row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 18px; }
+  .row .grow { flex: 1; }
+  button.go {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #fff; border: none; border-radius: 12px;
+    padding: 14px 28px; font-size: 16px; font-weight: 700; cursor: pointer;
+    min-width: 160px;
+  }
+  button.go:disabled { opacity: .5; cursor: wait; }
+
+  .examples { margin-top: 14px; font-size: 14px; color: var(--muted); }
+  .examples a { color: var(--accent-2); cursor: pointer; text-decoration: none; margin-right: 10px; }
+  .examples a:hover { text-decoration: underline; }
+
+  .error {
+    display: none; margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+    background: #3a1820; border: 1px solid #6b2635; color: #ffb3c0; font-size: 14px;
+  }
+
+  .result { margin-top: 28px; }
+  .stage {
+    position: relative; border-radius: var(--radius); overflow: hidden;
+    background: var(--panel); border: 1px solid var(--border);
+    min-height: 320px; display: flex; align-items: center; justify-content: center;
+  }
+  .stage img { width: 100%; height: auto; display: block; }
+  .placeholder { color: var(--muted); text-align: center; padding: 40px; }
+  .spinner {
+    width: 48px; height: 48px; border-radius: 50%;
+    border: 4px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.9s linear infinite; margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .actions { display: none; gap: 10px; margin-top: 12px; }
+  .actions button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px; cursor: pointer; font-size: 14px;
+  }
+  .actions button:hover { border-color: var(--accent-2); }
+
+  .gallery-title { margin: 36px 0 12px; font-size: 18px; font-weight: 700; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .gallery img {
+    width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px;
+    border: 1px solid var(--border); cursor: pointer; transition: .15s;
+  }
+  .gallery img:hover { transform: scale(1.03); border-color: var(--accent-2); }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 48px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Hayal Et ✦</div>
+    <p>Aklındakini yaz, yapay zekâ saniyeler içinde çizsin.</p>
+  </header>
+
+  <div class="card">
+    <textarea id="prompt" placeholder="Örn: Kış gecesi İstanbul'da karlı bir sokakta turuncu bir kedi, sıcak ışıklı dükkanlar"></textarea>
+    <div class="examples">
+      Örnekler:
+      <a data-ex="a cozy tiny boutique shop interior, pastel colors, isometric game art">butik dükkan</a>
+      <a data-ex="a cute orange cat character mascot for a mobile game, sticker style">oyun maskotu</a>
+      <a data-ex="futuristic Istanbul skyline at sunset, Bosphorus bridge, cinematic">gelecekte İstanbul</a>
+    </div>
+
+    <div class="label">Stil</div>
+    <div class="chips" id="styles">
+      <button class="chip active" data-style="">Serbest</button>
+      <button class="chip" data-style="photorealistic, highly detailed, natural lighting">Fotoğraf</button>
+      <button class="chip" data-style="anime style, vibrant colors, studio quality">Anime</button>
+      <button class="chip" data-style="3D render, Pixar style, soft lighting">3D</button>
+      <button class="chip" data-style="watercolor painting, soft textures">Suluboya</button>
+      <button class="chip" data-style="pixel art, 16-bit, retro game">Piksel</button>
+      <button class="chip" data-style="flat vector illustration, clean shapes, minimal">Vektör</button>
+    </div>
+
+    <div class="row">
+      <div class="grow">
+        <div class="label">Boyut</div>
+        <div class="chips" id="ratios">
+          <button class="chip active" data-ratio="1:1">Kare</button>
+          <button class="chip" data-ratio="9:16">Dikey (telefon)</button>
+          <button class="chip" data-ratio="16:9">Yatay</button>
+        </div>
+      </div>
+      <button class="go" id="go">Oluştur ✨</button>
+    </div>
+
+    <div class="error" id="error"></div>
+  </div>
+
+  <div class="result">
+    <div class="stage" id="stage">
+      <div class="placeholder">Görselin burada görünecek.</div>
+    </div>
+    <div class="actions" id="actions">
+      <button id="download">⬇ İndir</button>
+      <button id="again">↻ Tekrar üret</button>
+    </div>
+  </div>
+
+  <div class="gallery-title">Son ürettiklerin</div>
+  <div class="gallery" id="gallery"><div class="empty">Henüz görsel yok.</div></div>
+
+  <footer>FLUX modeli ile çalışır · Replicate + Vercel</footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let style = "";
+  let ratio = "1:1";
+  let currentUrl = null;
+  let history = [];
+
+  try { history = JSON.parse(localStorage.getItem("hayalet-history") || "[]"); } catch (e) { history = []; }
+
+  function setupChips(containerId, onPick) {
+    const box = $(containerId);
+    box.addEventListener("click", (e) => {
+      const btn = e.target.closest(".chip");
+      if (!btn) return;
+      box.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+      btn.classList.add("active");
+      onPick(btn);
+    });
+  }
+  setupChips("styles", (b) => (style = b.dataset.style));
+  setupChips("ratios", (b) => (ratio = b.dataset.ratio));
+
+  document.querySelectorAll(".examples a").forEach((a) =>
+    a.addEventListener("click", () => { $("prompt").value = a.dataset.ex; $("prompt").focus(); })
+  );
+
+  function showError(msg) { $("error").textContent = msg; $("error").style.display = msg ? "block" : "none"; }
+
+  function renderGallery() {
+    const g = $("gallery");
+    if (!history.length) { g.innerHTML = '<div class="empty">Henüz görsel yok.</div>'; return; }
+    g.innerHTML = "";
+    history.forEach((item) => {
+      const img = document.createElement("img");
+      img.src = item.url; img.alt = item.prompt; img.title = item.prompt;
+      img.addEventListener("click", () => showImage(item.url));
+      g.appendChild(img);
+    });
+  }
+
+  function showImage(url) {
+    currentUrl = url;
+    $("stage").innerHTML = "";
+    const img = document.createElement("img");
+    img.src = url; img.alt = "Üretilen görsel";
+    $("stage").appendChild(img);
+    $("actions").style.display = "flex";
+  }
+
+  async function generate() {
+    const text = $("prompt").value.trim();
+    if (text.length < 3) { showError("Önce ne görmek istediğini yaz."); return; }
+    showError("");
+    const fullPrompt = style ? `${text}, ${style}` : text;
+
+    $("go").disabled = true; $("go").textContent = "Çiziliyor…";
+    $("actions").style.display = "none";
+    $("stage").innerHTML = '<div class="placeholder"><div class="spinner"></div>Yapay zekâ çiziyor, birkaç saniye…</div>';
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: fullPrompt, aspectRatio: ratio }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.imageUrl) throw new Error(data.error || "Bir şeyler ters gitti.");
+
+      showImage(data.imageUrl);
+      history.unshift({ url: data.imageUrl, prompt: text });
+      history = history.slice(0, 12);
+      try { localStorage.setItem("hayalet-history", JSON.stringify(history)); } catch (e) {}
+      renderGallery();
+    } catch (err) {
+      $("stage").innerHTML = '<div class="placeholder">Görsel üretilemedi.</div>';
+      showError(err.message);
+    } finally {
+      $("go").disabled = false; $("go").textContent = "Oluştur ✨";
+    }
+  }
+
+  $("go").addEventListener("click", generate);
+  $("again").addEventListener("click", generate);
+  $("prompt").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) generate();
+  });
+
+  $("download").addEventListener("click", async () => {
+    if (!currentUrl) return;
+    try {
+      const blob = await (await fetch(currentUrl)).blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "hayal-et-" + Date.now() + ".webp";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      window.open(currentUrl, "_blank");
+    }
+  });
+
+  renderGallery();
+</script>
+</body>
+</html>

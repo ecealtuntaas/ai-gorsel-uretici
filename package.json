@@ -1,0 +1,10 @@
+{
+  "name": "ai-gorsel-uretici",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Yazıdan görsel üreten basit bir web sitesi (Replicate + Vercel)",
+  "engines": {
+    "node": ">=18"
+  }
+}
